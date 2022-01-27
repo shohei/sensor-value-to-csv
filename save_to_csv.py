@@ -3,6 +3,7 @@ import time # Optional (required if using time.sleep() below)
 import sys
 import os
 import pandas as pd
+from datetime import datetime
 
 port = "/dev/tty.usbmodem142301"
 ser = serial.Serial(port=port, baudrate=9600)
@@ -10,7 +11,10 @@ ser = serial.Serial(port=port, baudrate=9600)
 class DataCapture():
     def __init__(self):
         self.lines = ""
+        self.filename = datetime.now().strftime("%d%m%y_%H%M%S")+".csv"
         self.data_dict = {"pressure":[], "airflow":[], "oilflow":[]}
+        df = pd.DataFrame(self.data_dict)
+        df.to_csv(self.filename, mode='w', index=False)
 
     def main(self):
         while (True):
@@ -27,19 +31,25 @@ class DataCapture():
                     self.data_dict["pressure"].append(pressure)
                     self.data_dict["airflow"].append(airflow)
                     self.data_dict["oilflow"].append(oilflow)
-                    # reset line
-                    self.lines = ""
+                    df = pd.DataFrame(self.data_dict)
+                    df.to_csv(self.filename, mode='a', index=False, header=False)
+
+                    self.reset()
              
             time.sleep(0.01) #100Hz
+
+    def reset(self):
+        self.lines = ""
+        self.data_dict["oilflow"] = []
+        self.data_dict["airflow"] = [] 
+        self.data_dict["pressure"] = []
 
 if __name__=="__main__":
     d = DataCapture()
     try:
         d.main()
     except KeyboardInterrupt:
-        print("Interrupted. Save data to CSV")
-        df = pd.DataFrame(d.data_dict)
-        df.to_csv('data.csv', index=False)
+        print("Interrupted.")
         try:
             sys.exit(0)
         except SystemExit:
